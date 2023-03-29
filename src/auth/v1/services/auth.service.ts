@@ -31,7 +31,7 @@ export class AuthService {
   async login(authCredentials: SignInCredentialsDto): Promise<IResponse> {
     return {
       success: true,
-      data: { ...(await this.authRepository.login(authCredentials)) },
+      message: { ...(await this.authRepository.login(authCredentials)) },
     };
   }
 
@@ -63,6 +63,14 @@ export class AuthService {
     return {
       success: true,
       message: await this.authRepository.logout(user),
+    };
+  }
+
+  async verifyLoginOtp(otp: string): Promise<IResponse> {
+    return {
+      success: true,
+      message: AUTH_ENUM.LOGIN_SUCCESS,
+      data: await this.authRepository.verifyLoginOtp(otp),
     };
   }
 }

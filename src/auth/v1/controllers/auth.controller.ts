@@ -3,6 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { SignInCredentialsDto } from 'src/auth/dtos/auth-sign-in.dto';
 import { SignUpCredentialsDto } from 'src/auth/dtos/auth-signup.dto';
 import { ChangePasswordCredentials } from 'src/auth/dtos/change-password.dto';
+import { VerifyOtpCredentials } from 'src/auth/dtos/verify-otp.dto';
 import { UserDocument } from 'src/auth/schemas/user.schema';
 import { IResponse } from 'src/interfaces/response.interface';
 import { GetUser } from '../decorators/get-user.decorator';
@@ -20,6 +21,11 @@ export class AuthController {
   @Post('sign-in')
   async login(@Body() authCredentials: SignInCredentialsDto) {
     return await this.authService.login(authCredentials);
+  }
+
+  @Post('verify-otp')
+  async verifyLoginOtp(@Body() otpCredentials: VerifyOtpCredentials) {
+    return await this.authService.verifyLoginOtp(otpCredentials.otp);
   }
 
   @UseGuards(AuthGuard())

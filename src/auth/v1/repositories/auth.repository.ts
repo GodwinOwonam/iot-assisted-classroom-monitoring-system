@@ -11,12 +11,17 @@ import { SignUpCredentialsDto } from 'src/auth/dtos/auth-signup.dto';
 import { User, UserDocument } from 'src/auth/schemas/user.schema';
 import * as bcrypt from 'bcrypt';
 import { UserSchemaInterface } from '../interfaces/user.interface';
-import { REGISTRATION_ENUM, AUTH_ENUM } from '../constants/enums/auth-enums';
+import {
+  REGISTRATION_ENUM,
+  AUTH_ENUM,
+  OTP_TYPES,
+} from '../constants/enums/auth-enums';
 import { SignInCredentialsDto } from 'src/auth/dtos/auth-sign-in.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordCredentials } from 'src/auth/dtos/change-password.dto';
+import { getFromEnv } from 'src/helpers/env.helper';
 
 @Injectable()
 export class AuthRepository {
@@ -34,17 +39,32 @@ export class AuthRepository {
 
       const hashedPassword = await this.hashPassword(password);
 
-      const user: UserSchemaInterface = await this.model.create({
+      const user = await this.model.create({
         username,
         email,
         password: hashedPassword,
         requiresLogin: true,
+        otp: await this.generateOtp(),
+        otpType: OTP_TYPES.LOGIN,
+        isAdmin: false,
+        isSuperAdmin: false,
+        isVerified: false,
+        otpStatus: false,
+        otpExpiry: new Date(
+          Date.UTC(
+            new Date().getUTCFullYear(),
+            new Date().getUTCMonth(),
+            new Date().getUTCDate(),
+            new Date().getUTCHours() + 1,
+            5,
+          ),
+        ),
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
       if (user) {
-        return REGISTRATION_ENUM.SUCCESS;
+        return await this.sendUserOtp(user);
       }
 
       return REGISTRATION_ENUM.REGISTRATION_FAILED;
@@ -70,13 +90,106 @@ export class AuthRepository {
       throw new UnauthorizedException(AUTH_ENUM.INVALID_CREDENTIALS);
     }
 
+    if (!user.isVerified) {
+      throw new UnauthorizedException(AUTH_ENUM.UNVERIFIED_ACCOUNT);
+    }
+
+    await this.invalidateUser(user);
+    return await this.sendUserOtp(user);
+  }
+
+  async verifyLoginOtp(otp: string): Promise<any> {
+    try {
+      const user = await this.model.findOne({ otp });
+
+      if (!user) {
+        throw new UnauthorizedException(AUTH_ENUM.UNAUTHORIZED);
+      }
+
+      if (user.otpType != OTP_TYPES.LOGIN) {
+        throw new UnauthorizedException(AUTH_ENUM.INVALID_OTP);
+      }
+
+      const verified = await this.verifyUserOtp(otp);
+      if (!verified.success) {
+        return AUTH_ENUM.UNVERIFIED_ACCOUNT;
+      }
+
+      return await this.grantCredentials(verified.data);
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async verifyUserOtp(otp: string): Promise<any> {
+    const user = await this.model.findOne({ otp });
+
+    if (!user) {
+      throw new UnauthorizedException(AUTH_ENUM.UNAUTHORIZED);
+    }
+
+    const currentDate = new Date();
+
+    if (user.otpExpiry < currentDate) {
+      throw new UnprocessableEntityException(AUTH_ENUM.OTP_EXPIRED);
+    }
+
+    if (user.otpStatus) {
+      throw new UnprocessableEntityException(AUTH_ENUM.INVALID_OTP);
+    }
+
+    await this.model.findOneAndUpdate(
+      {
+        _id: user._id,
+      },
+      {
+        isVerified: true,
+        otpStatus: true,
+      },
+    );
+
+    await this.invalidateUser(user);
+    return {
+      success: true,
+      message: AUTH_ENUM.OTP_VERIFIED_SUCCESS,
+      data: user,
+    };
+  }
+
+  private async sendUserOtp(user: UserDocument): Promise<any> {
+    const otp = await this.generateOtp();
+
+    await this.model.findOneAndUpdate(
+      {
+        _id: user._id,
+      },
+      {
+        otp,
+        otpStatus: false,
+        otpType: OTP_TYPES.LOGIN,
+        otpExpiry: new Date(
+          Date.UTC(
+            new Date().getUTCFullYear(),
+            new Date().getUTCMonth(),
+            new Date().getUTCDate(),
+            new Date().getUTCHours() + 1,
+            new Date().getUTCMinutes() + 5,
+          ),
+        ),
+      },
+    );
+
+    const updatedUser = await this.model.findOne({ _id: user._id });
+    return {
+      otp: updatedUser.otp,
+      expires: updatedUser.otpExpiry,
+    };
+  }
+
+  private async grantCredentials(user: UserDocument): Promise<any> {
     const payload = { username: user.username };
-    const jwt_secret = JSON.parse(
-      fs.readFileSync(path.join('.env.stage.dev.json')).toString(),
-    ).jwt_secret;
-    const jwt_expiry = JSON.parse(
-      fs.readFileSync(path.join('.env.stage.dev.json')).toString(),
-    ).jwt_expiry;
+    const jwt_secret = getFromEnv('jwt_secret');
+    const jwt_expiry = getFromEnv('jwt_expiry');
 
     const accessToken = this.jwtService.sign(payload, {
       secret: jwt_secret,
@@ -144,5 +257,20 @@ export class AuthRepository {
         requiresLogin: true,
       },
     );
+  }
+
+  private async generateOtp() {
+    let user: UserDocument | null = null;
+    let otp = '';
+
+    do {
+      otp += String(Math.ceil(Math.random() * 9999999));
+      if (otp.length > 6) {
+        otp = otp.substring(0, 6);
+      }
+      user = await this.model.findOne({ otp });
+    } while (user || otp.length < 6);
+
+    return otp;
   }
 }
