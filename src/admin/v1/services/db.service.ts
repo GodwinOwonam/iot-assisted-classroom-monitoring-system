@@ -22,9 +22,9 @@ export class DbService {
     },
     admin: UserDocument,
   ): Promise<IResponse | any> {
-    if (!admin) {
-      throw new UnauthorizedException(AUTH_ENUM.UNAUTHORIZED);
-    }
+    // if (!admin) {
+    //   throw new UnauthorizedException(AUTH_ENUM.UNAUTHORIZED);
+    // }
 
     const { collection, proceed } = collectionDto;
 
@@ -48,9 +48,9 @@ export class DbService {
     collectionDto: { proceed: string },
     admin: UserDocument,
   ): Promise<any> {
-    if (!admin) {
-      throw new UnauthorizedException(AUTH_ENUM.UNAUTHORIZED);
-    }
+    // if (!admin) {
+    //   throw new UnauthorizedException(AUTH_ENUM.UNAUTHORIZED);
+    // }
 
     const { proceed } = collectionDto;
 
