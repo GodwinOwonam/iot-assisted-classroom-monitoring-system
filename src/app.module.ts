@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { getFromEnv } from './helpers/env.helper';
+import { AdminModule } from './admin/admin.module';
 
 const databaseUrl =
   process.env.DATABASE_URL || 'mongodb://localhost:27017/classroom-project';
@@ -33,6 +34,7 @@ const databaseUrl =
     TodoitemsModule,
     AuthModule,
     UsersModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],

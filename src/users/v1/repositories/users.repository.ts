@@ -80,7 +80,11 @@ export class UsersRepository {
     const profile = await this.model.findOne({ userId: user._id });
 
     if (!profile) {
-      throw new NotFoundException(PROFILE_ENUMS.NOT_FOUND);
+      return this.createNewProfile(user, {
+        fullName: '',
+        department: '',
+        faculty: '',
+      });
     }
 
     return profile;
@@ -126,6 +130,8 @@ export class UsersRepository {
       }
       return profile;
     } catch (error) {
+      console.log(error);
+
       if (error.code == 11000) {
         if (error.keyPattern?.businessEmail) {
           throw new ConflictException(PROFILE_ENUMS.EMAIL_CONFLICT);
@@ -134,5 +140,9 @@ export class UsersRepository {
 
       throw new InternalServerErrorException();
     }
+  }
+
+  async deleteAllProfiles(): Promise<any> {
+    return this.model.deleteMany();
   }
 }

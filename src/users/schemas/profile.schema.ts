@@ -9,13 +9,13 @@ export class Profile implements ProfileSchemaInterface {
   @Prop({ required: true })
   userId: string;
 
-  @Prop({ unique: true, type: String })
+  @Prop()
   fullName: string;
 
   @Prop()
   department?: string;
 
-  @Prop({ unique: true, type: String })
+  @Prop()
   faculty?: string;
 
   @Prop({ default: null })

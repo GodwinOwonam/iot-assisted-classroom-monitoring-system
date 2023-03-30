@@ -15,8 +15,29 @@ export class User implements UserSchemaInterface {
   @Prop({ required: true })
   password: string;
 
+  @Prop()
+  otp: string | null;
+
+  @Prop()
+  otpType: string | null;
+
   @Prop({ required: true, default: false })
   requiresLogin: boolean;
+
+  @Prop({ required: true, default: false })
+  isAdmin: boolean;
+
+  @Prop({ required: true, default: false })
+  isSuperAdmin: boolean;
+
+  @Prop({ required: true, default: false })
+  isVerified: boolean;
+
+  @Prop({ required: true, default: false })
+  otpStatus: boolean;
+
+  @Prop()
+  otpExpiry: Date;
 
   @Prop({ required: true, default: new Date() })
   createdAt: Date;
