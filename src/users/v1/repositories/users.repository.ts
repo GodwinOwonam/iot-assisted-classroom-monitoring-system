@@ -141,4 +141,8 @@ export class UsersRepository {
       throw new InternalServerErrorException();
     }
   }
+
+  async deleteAllProfiles(): Promise<any> {
+    return this.model.deleteMany();
+  }
 }

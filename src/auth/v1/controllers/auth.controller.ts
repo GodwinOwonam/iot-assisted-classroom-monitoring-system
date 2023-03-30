@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SignInCredentialsDto } from 'src/auth/dtos/auth-sign-in.dto';
 import { SignUpCredentialsDto } from 'src/auth/dtos/auth-signup.dto';
@@ -44,4 +44,9 @@ export class AuthController {
   }
 
   // TODO: Implement reset password with otp from email
+
+  @Get('super-admin')
+  async createSuperAdmin(): Promise<IResponse> {
+    return await this.authService.createSuperAdmin();
+  }
 }

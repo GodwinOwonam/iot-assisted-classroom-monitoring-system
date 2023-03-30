@@ -10,18 +10,16 @@ import { Model } from 'mongoose';
 import { SignUpCredentialsDto } from 'src/auth/dtos/auth-signup.dto';
 import { User, UserDocument } from 'src/auth/schemas/user.schema';
 import * as bcrypt from 'bcrypt';
-import { UserSchemaInterface } from '../interfaces/user.interface';
 import {
   REGISTRATION_ENUM,
   AUTH_ENUM,
   OTP_TYPES,
 } from '../constants/enums/auth-enums';
 import { SignInCredentialsDto } from 'src/auth/dtos/auth-sign-in.dto';
-import * as fs from 'fs';
-import * as path from 'path';
 import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordCredentials } from 'src/auth/dtos/change-password.dto';
 import { getFromEnv } from 'src/helpers/env.helper';
+import { IResponse } from 'src/interfaces/response.interface';
 
 @Injectable()
 export class AuthRepository {
@@ -234,6 +232,60 @@ export class AuthRepository {
     return AUTH_ENUM.LOGOUT_SUCCESS;
   }
 
+  async createSuperAdmin(
+    authSignupCredentials: SignUpCredentialsDto,
+  ): Promise<string> {
+    try {
+      const superAdmin = await this.model.findOne({ isSuperAdmin: true });
+
+      if (!superAdmin) {
+        const { username, email, password } = authSignupCredentials;
+
+        const hashedPassword = await this.hashPassword(password);
+
+        await this.model.create({
+          username,
+          email,
+          password: hashedPassword,
+          requiresLogin: true,
+          otp: await this.generateOtp(),
+          otpType: OTP_TYPES.LOGIN,
+          isAdmin: true,
+          isSuperAdmin: true,
+          isVerified: true,
+          otpStatus: true,
+          otpExpiry: new Date(
+            Date.UTC(
+              new Date().getUTCFullYear(),
+              new Date().getUTCMonth(),
+              new Date().getUTCDate(),
+              new Date().getUTCHours() + 1,
+              5,
+            ),
+          ),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      return REGISTRATION_ENUM.SUCCESS;
+    } catch (error) {
+      if (error.code == 11000) {
+        if (error.keyPattern?.username) {
+          throw new ConflictException(REGISTRATION_ENUM.USERNAME_CONFLICT);
+        } else if (error.keyPattern?.email) {
+          throw new ConflictException(REGISTRATION_ENUM.EMAIL_CONFLICT);
+        }
+      }
+
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async deleteAllUsers(): Promise<any> {
+    return this.model.deleteMany();
+  }
+
   // Private functions begin here
 
   private async hashPassword(password: string): Promise<string> {
@@ -250,7 +302,7 @@ export class AuthRepository {
     );
   }
 
-  private async invalidateUser(user: UserDocument): Promise<void> {
+  async invalidateUser(user: UserDocument): Promise<void> {
     await this.model.findOneAndUpdate(
       { _id: user._id },
       {

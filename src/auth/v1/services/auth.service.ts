@@ -6,6 +6,7 @@ import { AUTH_ENUM, REGISTRATION_ENUM } from '../constants/enums/auth-enums';
 import { SignInCredentialsDto } from 'src/auth/dtos/auth-sign-in.dto';
 import { UserDocument } from 'src/auth/schemas/user.schema';
 import { ChangePasswordCredentials } from 'src/auth/dtos/change-password.dto';
+import { getFromEnv } from 'src/helpers/env.helper';
 
 @Injectable()
 export class AuthService {
@@ -71,6 +72,18 @@ export class AuthService {
       success: true,
       message: AUTH_ENUM.LOGIN_SUCCESS,
       data: await this.authRepository.verifyLoginOtp(otp),
+    };
+  }
+
+  async createSuperAdmin(): Promise<IResponse> {
+    return {
+      success: true,
+      message: await this.authRepository.createSuperAdmin({
+        username: getFromEnv('super_admin_username'),
+        email: getFromEnv('super_admin_email'),
+        password: getFromEnv('super_admin_password'),
+        confirmPassword: getFromEnv('super_admin_password'),
+      }),
     };
   }
 }
