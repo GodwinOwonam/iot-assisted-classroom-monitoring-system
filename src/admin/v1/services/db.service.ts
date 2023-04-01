@@ -66,6 +66,13 @@ export class DbService {
     };
   }
 
+  async getAllUsers(): Promise<any> {
+    return {
+      success: true,
+      data: await this.authRepository.getAllUsers(),
+    };
+  }
+
   private async dropDbCollection(
     collectionName: string,
     admin: UserDocument,

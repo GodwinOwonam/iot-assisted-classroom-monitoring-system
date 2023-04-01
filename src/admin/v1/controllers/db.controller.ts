@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UserDocument } from 'src/auth/schemas/user.schema';
 import { GetAdmin } from 'src/auth/v1/decorators/get-admin.decorator';
@@ -23,5 +23,10 @@ export class DbController {
     @GetAdmin() admin: UserDocument,
   ): Promise<any> {
     return await this.dbService.dropDatabase(collectionDto, admin);
+  }
+
+  @Get('/all-users')
+  async getAllUsers(): Promise<any> {
+    return await this.dbService.getAllUsers();
   }
 }
