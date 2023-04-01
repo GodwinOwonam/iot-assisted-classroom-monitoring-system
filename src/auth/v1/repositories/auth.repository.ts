@@ -286,6 +286,10 @@ export class AuthRepository {
     return this.model.deleteMany();
   }
 
+  async getAllUsers(): Promise<UserDocument[]> {
+    return this.model.find().exec();
+  }
+
   // Private functions begin here
 
   private async hashPassword(password: string): Promise<string> {
